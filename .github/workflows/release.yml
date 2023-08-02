@@ -12,11 +12,6 @@ jobs:
           node-version: '18'
       - run: npm ci
       - run: npm test
-        env:
-          LOOKER_HOST: ${{ secrets.LOOKER_HOST}}
-          LOOKER_USERNAME: ${{ secrets.LOOKER_USERNAME}}
-          LOOKER_PASSWORD: ${{ secrets.LOOKER_PASSWORD}}
-          LOOKER_REPORT: ${{ secrets.LOOKER_REPORT}}
       - name: Release
         run: npx semantic-release
         env:

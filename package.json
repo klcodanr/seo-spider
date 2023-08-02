@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Crawl websites and generate SEO reports",
   "bin": {
-    "seo-crawler": "src/index.js"
+    "seo-spider": "src/cli.js"
   },
   "main": "src/index.js",
   "type": "module",
@@ -11,7 +11,10 @@
   "license": "ISC",
   "scripts": {
     "lint": "eslint .",
-    "test": "c8 mocha"
+    "test": "c8 mocha test/*.test.js --coverage",
+    "docs": "npx --yes jsdoc-to-markdown -c .jsdoc.json --files 'src/*.js'  > docs/API.md",
+    "release": "np",
+    "semantic-release": "semantic-release"
   },
   "dependencies": {
     "cli-progress": "^3.12.0",
@@ -23,6 +26,7 @@
     "@adobe/eslint-config-helix": "^2.0.2",
     "c8": "^8.0.1",
     "eslint": "^8.46.0",
+    "jsdoc-tsimport-plugin": "^1.0.5",
     "mocha": "^10.2.0",
     "static-server": "^2.2.1"
   }

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { program, InvalidArgumentError } from 'commander';
 import {
   lstat, mkdir, readFile, writeFile,
@@ -5,36 +6,7 @@ import {
 import { join, dirname } from 'path';
 import { json2csv } from 'json-2-csv';
 import { Progress } from './progress.js';
-import { SeoCrawler } from './seo-crawler.js';
-
-async function checkDirectory(dir) {
-  try {
-    const stats = await lstat(dir);
-    if (!stats.isDirectory()) {
-      throw new Error(`Invalid directory: ${dir}`);
-    }
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      await mkdir(dir, { recursive: true });
-    } else {
-      throw err;
-    }
-  }
-}
-
-async function checkFile(file) {
-  checkDirectory(dirname(file));
-  try {
-    const stats = await lstat(file);
-    if (!stats.isFile()) {
-      throw new Error(`Invalid file: ${file}`);
-    }
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      throw err;
-    } // otherwise the file doesn't exist which is fine
-  }
-}
+import { SeoSpider } from './index.js';
 
 async function getVersion() {
   const { version } = JSON.parse(
@@ -43,80 +15,109 @@ async function getVersion() {
   return version;
 }
 
-/**
- * Parses the value into a number
- * @param {string} value
- * @returns {number|undefined}
- */
-function parseInteger(value) {
-  if (value) {
-    const parsedValue = parseInt(value, 10);
-    if (Number.isNaN(parsedValue)) {
-      throw new InvalidArgumentError('Not a number.');
-    }
-  }
-  return undefined;
-}
-
-/**
- * Parses the value into an array of strings
- * @param {string} value
- * @returns {string[]|undefined}
- */
-function parseArray(value) {
-  if (value) {
-    return value.split(/,/g);
-  }
-  return undefined;
-}
-
 const version = await getVersion();
 
 export class Cli {
+  static async #checkDirectory(dir) {
+    try {
+      const stats = await lstat(dir);
+      if (!stats.isDirectory()) {
+        throw new Error(`Invalid directory: ${dir}`);
+      }
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        await mkdir(dir, { recursive: true });
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  static async #checkFile(file) {
+    Cli.#checkDirectory(dirname(file));
+    try {
+      const stats = await lstat(file);
+      if (!stats.isFile()) {
+        throw new Error(`Invalid file: ${file}`);
+      }
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        throw err;
+      } // otherwise the file doesn't exist which is fine
+    }
+  }
+
+  /**
+   * Parses the value into a number
+   * @param {string} value
+   * @returns {number|undefined}
+   */
+  static #parseInteger(value) {
+    if (value) {
+      const parsedValue = parseInt(value, 10);
+      if (Number.isNaN(parsedValue)) {
+        throw new InvalidArgumentError('Not a number.');
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Parses the value into an array of strings
+   * @param {string} value
+   * @returns {string[]|undefined}
+   */
+  static #parseArray(value) {
+    if (value) {
+      return value.split(/,/g);
+    }
+    return undefined;
+  }
+
   #options;
+
+  #start;
 
   constructor(argv) {
     program
-      .name('SEO Spider')
+      .name('seo-spider')
+      .showHelpAfterError()
       .description(
         'Crawl websites and extract relevant information including metadata and in/out links',
       )
       .version(version)
-      .requiredOption(
-        '-s, --start-url <startUrl>',
-        'The start URL for the crawl',
-      )
+      .argument('<startUrl>', 'The start URL for the crawl')
       .option(
         '-a, --allowed-hosts <allowedHosts>',
         'The list of hosts which will be crawled. The hostname of the start URL will be added to this list',
-        parseArray,
+        Cli.#parseArray,
       )
       .option('-d, --debug', 'Enable debug logging')
       .option(
         '-e, --extract-headers <extractHeaders>',
         'Header names to extract from the response',
-        parseArray,
+        Cli.#parseArray,
       )
       .option(
         '-m, --extract-meta-tags <extractMetaTags>',
         'Meta tags to extract from the response HEAD',
-        parseArray,
+        Cli.#parseArray,
       )
       .option(
         '-c <maxConnections>, --max-connections <maxConnections>',
         'The maximum number of connections, 10 by default',
-        parseInteger,
+        Cli.#parseInteger,
       )
       .option('--referer <referer>', 'Set the referrer header on the requests')
       .option(
         '--retry-timeout <retryTimeout>',
         'Set the retry timeout for the requests',
-        parseInteger,
+        Cli.#parseInteger,
       )
       .option(
         '-i, --ignore-hosts <ignoreHosts>',
         'A comma separated list of hostnames to ignore and neither crawl nor check',
-        parseArray,
+        Cli.#parseArray,
       )
       .option(
         '-x, --ignore-external',
@@ -126,7 +127,7 @@ export class Cli {
         '-p, --ignore-pattern <ignorePattern>',
         'Ignore urls matching the specified pattern. These urls will neither be crawled nor checked',
       )
-      .option('-t, --timeout <timeout>', 'timeout', parseInteger)
+      .option('-t, --timeout <timeout>', 'timeout', Cli.#parseInteger)
       .option('-u, --user-agent <userAgent>', 'Set the user-agent header')
       .option('--link-selector <linkSelector>', 'Override the link selector')
       .option(
@@ -141,30 +142,37 @@ export class Cli {
         '--output-csv <directory>',
         'Write the output as CSV files to the specified directory',
       )
-      .option('--output-json [type]', 'Write the output a JSON file');
+      .option('--output-json [type]', 'Write the output a JSON file')
+      .option('--config <config>', 'Use a configuration JSON file');
 
     program.parse(argv || process.argv);
 
+    // eslint-disable-next-line prefer-destructuring
+    this.#start = program.args[0];
     this.#options = program.opts();
   }
 
   async run() {
     process.stderr.write(`SEO Spider v${version}\n`);
     this.validateParams();
+    if (this.#options.config) {
+      const config = JSON.parse(await readFile(this.#options.config));
+      this.#options = { ...config, ...this.#options };
+    }
     const progress = new Progress(this.#options);
-    const seoCrawler = new SeoCrawler(this.#options, progress);
-    await seoCrawler.crawl();
-    await this.output(seoCrawler);
+    const spider = new SeoSpider(this.#start, this.#options, progress);
+    await spider.crawl();
+    await this.output(spider);
   }
 
   /**
-   * @param {SeoCrawler} seoCrawler
+   * @param {SeoSpider} spider
    */
-  async output(seoCrawler) {
+  async output(spider) {
     if (this.#options.outputCsv) {
       await writeFile(
         join(this.#options.outputCsv, 'urls.csv'),
-        await json2csv(Object.values(seoCrawler.urls), {
+        await json2csv(Object.values(spider.urls), {
           excludeKeys: ['inLinks', 'outLinks'],
         }),
       );
@@ -172,7 +180,7 @@ export class Cli {
       await writeFile(
         join(this.#options.outputCsv, 'inlinks.csv'),
         await json2csv(
-          Object.values(seoCrawler.urls).flatMap((info) => info.inLinks.map((inlink) => ({
+          Object.values(spider.urls).flatMap((info) => info.inLinks.map((inlink) => ({
             ...inlink,
             target: info.url,
           }))),
@@ -182,7 +190,7 @@ export class Cli {
       await writeFile(
         join(this.#options.outputCsv, 'outlinks.csv'),
         await json2csv(
-          Object.values(seoCrawler.urls).flatMap((info) => info.outLinks?.map((outlink) => ({
+          Object.values(spider.urls).flatMap((info) => info.outLinks?.map((outlink) => ({
             ...outlink,
             source: info.url,
           }))),
@@ -192,21 +200,23 @@ export class Cli {
     } else if (typeof this.#options.outputJson === 'string') {
       await writeFile(
         this.#options.outputJson,
-        JSON.stringify(seoCrawler.urls, null, 2),
+        JSON.stringify(spider.urls, null, 2),
       );
       process.stderr.write(`Report written to ${this.#options.outputJson}\n`);
     } else {
-      process.stdout.write(JSON.stringify(seoCrawler.urls, null, 2));
+      process.stdout.write(JSON.stringify(spider.urls, null, 2));
     }
   }
 
   async validateParams() {
     if (this.#options.outputCsv) {
-      await checkFile(join(this.#options.outputCsv, 'urls.csv'));
-      await checkFile(join(this.#options.outputCsv, 'inlinks.csv'));
-      await checkFile(join(this.#options.outputCsv, 'outlinks.csv'));
+      await Cli.#checkFile(join(this.#options.outputCsv, 'urls.csv'));
+      await Cli.#checkFile(join(this.#options.outputCsv, 'inlinks.csv'));
+      await Cli.#checkFile(join(this.#options.outputCsv, 'outlinks.csv'));
     } else if (typeof this.#options.outputJson === 'string') {
-      await checkFile(this.#options.outputJson);
+      await Cli.#checkFile(this.#options.outputJson);
     }
   }
 }
+
+await new Cli().run();

@@ -9,7 +9,7 @@ export class Progress {
 
   /**
    *
-   * @param {import("./seo-crawler").SeoCrawlerOptions} options
+   * @param {import("./seo-spider").SeoSpiderOptions} options
    */
   constructor(options) {
     this.#debug = options.debug;

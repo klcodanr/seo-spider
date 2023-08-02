@@ -10,6 +10,13 @@ const execp = promisify(exec);
 
 const server = new Server();
 
+function assertArrayContentsEqual(array1, array2) {
+  assert.strictEqual(
+    JSON.stringify(array1.sort(), null, 2),
+    JSON.stringify(array2.sort(), null, 2),
+  );
+}
+
 describe('cli Tests', () => {
   before(async () => {
     server.start();
@@ -24,49 +31,49 @@ describe('cli Tests', () => {
   after(() => server.stop());
 
   it('can crawl', async () => {
-    const res = await execp('node . -s http://localhost:8000/index.html');
+    const res = await execp('node src/cli.js http://localhost:8000/index.html');
     const report = JSON.parse(res.stdout);
-    assert.strictEqual(
-      JSON.stringify(Object.keys(report).sort()),
-      JSON.stringify(
-        [
-          'http://localhost:8000/index.html',
-          'http://localhost:8000/page2.html',
-          'https://www.github.com/',
-          'http://localhost:8000/',
-          'https://github.com/',
-          'https://picsum.photos/200/300',
-        ].sort(),
-      ),
-    );
+
+    assertArrayContentsEqual(Object.keys(report), [
+      'http://localhost:8000/',
+      'http://localhost:8000/config.json',
+      'http://localhost:8000/index.html',
+      'http://localhost:8000/invalidpage.html',
+      'http://localhost:8000/page2.html',
+      'https://github.com/',
+      'http://localhost:8000/an-image.png',
+      'https://www.github.com/',
+    ]);
     assert.ok(res.stderr.includes('SEO Spider'));
   });
 
   it('can ignore external', async () => {
-    const res = await execp('node . -s http://localhost:8000/index.html -x');
-    const report = JSON.parse(res.stdout);
-    assert.strictEqual(
-      JSON.stringify(Object.keys(report).sort()),
-      JSON.stringify(
-        [
-          'http://localhost:8000/index.html',
-          'http://localhost:8000/page2.html',
-          'http://localhost:8000/',
-        ].sort(),
-      ),
+    const res = await execp(
+      'node src/cli.js -x http://localhost:8000/index.html',
     );
+    const report = JSON.parse(res.stdout);
+    assertArrayContentsEqual(Object.keys(report), [
+      'http://localhost:8000/',
+      'http://localhost:8000/config.json',
+      'http://localhost:8000/index.html',
+      'http://localhost:8000/invalidpage.html',
+      'http://localhost:8000/an-image.png',
+      'http://localhost:8000/page2.html',
+    ]);
     assert.ok(res.stderr.includes('SEO Spider'));
   });
 
   it('can limit connections', async () => {
-    const res = await execp('node . -s http://localhost:8000/index.html -c 1');
+    const res = await execp(
+      'node src/cli.js -c 1 http://localhost:8000/index.html',
+    );
     const report = JSON.parse(res.stdout);
     assert.ok(report);
   });
 
   it('can set allowed hosts', async () => {
     const res = await execp(
-      'node . -s http://localhost:8000/index.html -a host1,127.0.0.1',
+      'node src/cli.js -a host1,127.0.0.1 http://localhost:8000/index.html',
     );
     const report = JSON.parse(res.stdout);
     assert.ok(report);
@@ -74,7 +81,17 @@ describe('cli Tests', () => {
 
   it('can ignore url patterns', async () => {
     const res = await execp(
-      'node . -s http://localhost:8000/index.html -p page2.html',
+      'node src/cli.js -p page2.html http://localhost:8000/index.html',
+    );
+    const report = JSON.parse(res.stdout);
+    assert.ok(
+      !Object.keys(report).includes('http://localhost:8000/page2.html'),
+    );
+  });
+
+  it('can specify config file', async () => {
+    const res = await execp(
+      'node src/cli.js --config test/res/config.json http://localhost:8000/index.html',
     );
     const report = JSON.parse(res.stdout);
     assert.ok(
@@ -84,7 +101,7 @@ describe('cli Tests', () => {
 
   it('can write JSON', async () => {
     const res = await execp(
-      'node . -s http://localhost:8000/index.html --output-json dist/test-report.json',
+      'node src/cli.js --output-json dist/test-report.json http://localhost:8000/index.html ',
     );
     assert.strictEqual(res.stdout, '');
     assert.ok(existsSync('dist/test-report.json'));
@@ -92,7 +109,7 @@ describe('cli Tests', () => {
 
   it('can extract meta tags', async () => {
     const res = await execp(
-      'node . -s http://localhost:8000/index.html -m keywords',
+      'node src/cli.js -m keywords http://localhost:8000/index.html ',
     );
     const { meta } = JSON.parse(res.stdout)['http://localhost:8000/'];
     assert.strictEqual(Object.keys(meta).length, 1);
@@ -104,7 +121,7 @@ describe('cli Tests', () => {
 
   it('can write csv', async () => {
     const res = await execp(
-      'node . -s http://localhost:8000/index.html --output-csv dist/csv',
+      'node src/cli.js --output-csv dist/csv http://localhost:8000/index.html',
     );
     assert.strictEqual(res.stdout, '');
     assert.ok(existsSync('dist/csv/inlinks.csv'));
