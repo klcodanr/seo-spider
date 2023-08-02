@@ -20,7 +20,6 @@
     "url": "https://github.com/klcodanr/seo-spider/issues"
   },
   "homepage": "https://github.com/klcodanr/seo-spider#readme",
-  
   "scripts": {
     "lint": "eslint .",
     "test": "c8 mocha test/*.test.js --coverage",
@@ -37,13 +36,16 @@
   "devDependencies": {
     "@adobe/eslint-config-helix": "^2.0.2",
     "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^10.0.1",
     "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^9.0.4",
     "@semantic-release/npm": "^10.0.3",
+    "@semantic-release/release-notes-generator": "^11.0.4",
     "c8": "^8.0.1",
     "eslint": "^8.46.0",
     "jsdoc-tsimport-plugin": "^1.0.5",
     "mocha": "^10.2.0",
-    "static-server": "^2.2.1",
-    "semantic-release": "^21.0.3"
+    "semantic-release": "^21.0.3",
+    "static-server": "^2.2.1"
   }
 }
