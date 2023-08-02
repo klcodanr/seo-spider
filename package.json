@@ -1,0 +1,29 @@
+{
+  "name": "seo-spider",
+  "version": "1.0.0",
+  "description": "Crawl websites and generate SEO reports",
+  "bin": {
+    "seo-crawler": "src/index.js"
+  },
+  "main": "src/index.js",
+  "type": "module",
+  "author": "Dan Klco",
+  "license": "ISC",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "c8 mocha"
+  },
+  "dependencies": {
+    "cli-progress": "^3.12.0",
+    "commander": "^11.0.0",
+    "crawler": "^1.4.0",
+    "json-2-csv": "^4.0.0"
+  },
+  "devDependencies": {
+    "@adobe/eslint-config-helix": "^2.0.2",
+    "c8": "^8.0.1",
+    "eslint": "^8.46.0",
+    "mocha": "^10.2.0",
+    "static-server": "^2.2.1"
+  }
+}
