@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/klcodanr/seo-spider/compare/v1.1.0...v1.1.1) (2023-10-27)
+
+
+### Bug Fixes
+
+* fixing bug which breaks CLI in reading version ([40c5d1a](https://github.com/klcodanr/seo-spider/commit/40c5d1adf979a3f34a066cf44584bf1af53a9fe7))
+
 # [1.1.0](https://github.com/klcodanr/seo-spider/compare/v1.0.0...v1.1.0) (2023-10-27)
 
 
