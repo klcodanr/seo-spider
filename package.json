@@ -1,6 +1,6 @@
 {
   "name": "seo-spider",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Crawl websites and generate SEO reports",
   "main": "src/index.js",
   "bin": {

@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/klcodanr/seo-spider/compare/v1.0.0...v1.1.0) (2023-10-27)
+
+
+### Bug Fixes
+
+* improving error logging with more context and the URL ([bbae798](https://github.com/klcodanr/seo-spider/commit/bbae798651169c023e85888e9d61df1d736f9651))
+
+
+### Features
+
+* adding support for rate limiting, fixing incorrect number parsing and updating docs ([a9b33a3](https://github.com/klcodanr/seo-spider/commit/a9b33a37744971b96251eb290e64d518a9e6502a))
+
 # 1.0.0 (2023-08-02)
 
 
