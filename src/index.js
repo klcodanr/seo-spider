@@ -135,7 +135,10 @@ export class SeoSpider {
           const info = this.getUrlInfo(res.options.uri);
           info.statusCode = 'ERROR';
           info.error = error;
-          this.#progress.log('ERROR', error);
+          this.#progress.log(
+            'ERROR',
+            `Failed to handle response for: ${res.options.uri}: ${error}`,
+          );
         } else {
           this.handleResponse(res, crawler);
         }
