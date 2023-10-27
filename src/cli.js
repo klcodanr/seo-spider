@@ -1,21 +1,15 @@
 #!/usr/bin/env node
 import { program, InvalidArgumentError } from 'commander';
-import {
-  lstat, mkdir, readFile, writeFile,
-} from 'fs/promises';
+import { lstat, mkdir, readFile, writeFile } from 'fs/promises';
 import { join, dirname } from 'path';
 import { json2csv } from 'json-2-csv';
+import { createRequire } from 'node:module';
 import { Progress } from './progress.js';
 import { SeoSpider } from './index.js';
 
-async function getVersion() {
-  const { version } = JSON.parse(
-    await readFile(`${process.cwd()}/package.json`).then((buf) => buf.toString('utf-8')),
-  );
-  return version;
-}
+const require = createRequire(import.meta.url);
 
-const version = await getVersion();
+const { version } = require('../package.json');
 
 class Cli {
   static async #checkDirectory(dir) {
@@ -81,6 +75,7 @@ class Cli {
 
   constructor(argv) {
     program
+      .version(version)
       .name('seo-spider')
       .showHelpAfterError()
       .description(
@@ -199,20 +194,24 @@ class Cli {
       await writeFile(
         join(this.#options.outputCsv, 'inlinks.csv'),
         await json2csv(
-          Object.values(spider.urls).flatMap((info) => info.inLinks.map((inlink) => ({
-            ...inlink,
-            target: info.url,
-          }))),
+          Object.values(spider.urls).flatMap((info) =>
+            info.inLinks.map((inlink) => ({
+              ...inlink,
+              target: info.url,
+            })),
+          ),
         ),
       );
 
       await writeFile(
         join(this.#options.outputCsv, 'outlinks.csv'),
         await json2csv(
-          Object.values(spider.urls).flatMap((info) => info.outLinks?.map((outlink) => ({
-            ...outlink,
-            source: info.url,
-          }))),
+          Object.values(spider.urls).flatMap((info) =>
+            info.outLinks?.map((outlink) => ({
+              ...outlink,
+              source: info.url,
+            })),
+          ),
         ),
       );
       // handle CSVs
