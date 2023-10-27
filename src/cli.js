@@ -17,7 +17,7 @@ async function getVersion() {
 
 const version = await getVersion();
 
-export class Cli {
+class Cli {
   static async #checkDirectory(dir) {
     try {
       const stats = await lstat(dir);
@@ -53,13 +53,14 @@ export class Cli {
    * @returns {number|undefined}
    */
   static #parseInteger(value) {
+    let parsedValue;
     if (value) {
-      const parsedValue = parseInt(value, 10);
+      parsedValue = parseInt(value, 10);
       if (Number.isNaN(parsedValue)) {
         throw new InvalidArgumentError('Not a number.');
       }
     }
-    return undefined;
+    return parsedValue;
   }
 
   /**
@@ -127,8 +128,21 @@ export class Cli {
         '-p, --ignore-pattern <ignorePattern>',
         'Ignore urls matching the specified pattern. These urls will neither be crawled nor checked',
       )
-      .option('-t, --timeout <timeout>', 'timeout', Cli.#parseInteger)
-      .option('-u, --user-agent <userAgent>', 'Set the user-agent header')
+      .option(
+        '-l, --rate-limit <rateLimit>',
+        'the rate limit in milliseconds',
+        Cli.#parseInteger,
+      )
+      .option(
+        '-t, --timeout <timeout>',
+        'the maximum duration before a request will be aborted in milliseconds',
+        Cli.#parseInteger,
+      )
+      .option(
+        '-u, --user-agent <userAgent>',
+        'Set the user-agent header',
+        `SEO-Spider/${version}`,
+      )
       .option('--link-selector <linkSelector>', 'Override the link selector')
       .option(
         '--resource-link-selector <resourceLinkSelector>',
@@ -161,6 +175,11 @@ export class Cli {
     }
     const progress = new Progress(this.#options);
     const spider = new SeoSpider(this.#start, this.#options, progress);
+
+    process.on('SIGINT', () => {
+      process.stderr.write('Caught interrupt, writing output');
+      this.output(spider).then(() => process.exit());
+    });
     await spider.crawl();
     await this.output(spider);
   }

@@ -1,12 +1,18 @@
 /* eslint-env mocha */
 
 import assert from 'assert';
-import { exec } from 'child_process';
+import { exec as execCb } from 'child_process';
 import { promisify } from 'util';
 import { existsSync, rmSync } from 'fs';
 import { Server } from './server.js';
 
-const execp = promisify(exec);
+async function exec(command) {
+  const res = await promisify(execCb)(command);
+  console.log(`CMD: ${command}`);
+  console.log(`OUT: ${res.stdout}`);
+  console.log(`ERR: ${res.stderr}`);
+  return res;
+}
 
 const server = new Server();
 
@@ -18,9 +24,7 @@ function assertArrayContentsEqual(array1, array2) {
 }
 
 describe('cli Tests', () => {
-  before(async () => {
-    server.start();
-  });
+  before(async () => server.start());
   beforeEach(() => {
     try {
       rmSync('dist', { recursive: true });
@@ -31,7 +35,7 @@ describe('cli Tests', () => {
   after(() => server.stop());
 
   it('can crawl', async () => {
-    const res = await execp('node src/cli.js http://localhost:8000/index.html');
+    const res = await exec('node src/cli.js http://localhost:8000/index.html');
     const report = JSON.parse(res.stdout);
 
     assertArrayContentsEqual(Object.keys(report), [
@@ -48,7 +52,7 @@ describe('cli Tests', () => {
   });
 
   it('can ignore external', async () => {
-    const res = await execp(
+    const res = await exec(
       'node src/cli.js -x http://localhost:8000/index.html',
     );
     const report = JSON.parse(res.stdout);
@@ -64,7 +68,7 @@ describe('cli Tests', () => {
   });
 
   it('can limit connections', async () => {
-    const res = await execp(
+    const res = await exec(
       'node src/cli.js -c 1 http://localhost:8000/index.html',
     );
     const report = JSON.parse(res.stdout);
@@ -72,7 +76,7 @@ describe('cli Tests', () => {
   });
 
   it('can set allowed hosts', async () => {
-    const res = await execp(
+    const res = await exec(
       'node src/cli.js -a host1,127.0.0.1 http://localhost:8000/index.html',
     );
     const report = JSON.parse(res.stdout);
@@ -80,7 +84,7 @@ describe('cli Tests', () => {
   });
 
   it('can ignore url patterns', async () => {
-    const res = await execp(
+    const res = await exec(
       'node src/cli.js -p page2.html http://localhost:8000/index.html',
     );
     const report = JSON.parse(res.stdout);
@@ -90,7 +94,7 @@ describe('cli Tests', () => {
   });
 
   it('can specify config file', async () => {
-    const res = await execp(
+    const res = await exec(
       'node src/cli.js --config test/res/config.json http://localhost:8000/index.html',
     );
     const report = JSON.parse(res.stdout);
@@ -100,7 +104,7 @@ describe('cli Tests', () => {
   });
 
   it('can write JSON', async () => {
-    const res = await execp(
+    const res = await exec(
       'node src/cli.js --output-json dist/test-report.json http://localhost:8000/index.html ',
     );
     assert.strictEqual(res.stdout, '');
@@ -108,7 +112,7 @@ describe('cli Tests', () => {
   });
 
   it('can extract meta tags', async () => {
-    const res = await execp(
+    const res = await exec(
       'node src/cli.js -m keywords http://localhost:8000/index.html ',
     );
     const { meta } = JSON.parse(res.stdout)['http://localhost:8000/'];
@@ -120,7 +124,7 @@ describe('cli Tests', () => {
   });
 
   it('can write csv', async () => {
-    const res = await execp(
+    const res = await exec(
       'node src/cli.js --output-csv dist/csv http://localhost:8000/index.html',
     );
     assert.strictEqual(res.stdout, '');
@@ -128,4 +132,25 @@ describe('cli Tests', () => {
     assert.ok(existsSync('dist/csv/outlinks.csv'));
     assert.ok(existsSync('dist/csv/urls.csv'));
   });
+
+  it('fails with invalid directory', async () => {
+    await assert.rejects(() => exec(
+      'node src/cli.js --output-csv package.json http://localhost:8000/index.html',
+    ));
+  });
+
+  it('can handle request failure', async () => {
+    const res = await exec('node src/cli.js -t 10 --retry-timeout 10 http://notreal.local/');
+    assert.deepStrictEqual(JSON.parse(res.stdout), {
+      'http://notreal.local/': {
+        url: 'http://notreal.local/',
+        inLinks: [],
+        statusCode: 'ERROR',
+        error: {
+          code: 'ETIMEDOUT',
+          connect: true,
+        },
+      },
+    });
+  }).timeout(600000);
 });
