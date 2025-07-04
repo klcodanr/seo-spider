@@ -83,7 +83,6 @@ class Cli {
       .description(
         'Crawl websites and extract relevant information including metadata and in/out links',
       )
-      .version(version)
       .argument('<startUrl>', 'The start URL for the crawl')
       .option(
         '-a, --allowed-hosts <allowedHosts>',
