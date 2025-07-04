@@ -22,6 +22,7 @@
   "homepage": "https://github.com/klcodanr/seo-spider#readme",
   "scripts": {
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "c8 mocha test/*.test.js --coverage",
     "docs": "npx --yes jsdoc-to-markdown -c .jsdoc.json --files 'src/*.js'  > docs/API.md",
     "release": "np",

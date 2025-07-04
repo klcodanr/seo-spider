@@ -134,11 +134,9 @@ describe('cli Tests', () => {
   });
 
   it('fails with invalid directory', async () => {
-    await assert.rejects(() =>
-      exec(
-        'node src/cli.js --output-csv package.json http://localhost:8000/index.html',
-      ),
-    );
+    await assert.rejects(() => exec(
+      'node src/cli.js --output-csv package.json http://localhost:8000/index.html',
+    ));
   });
 
   it('can handle request failure', async () => {
