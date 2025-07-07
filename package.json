@@ -46,7 +46,7 @@
     "eslint": "^8.46.0",
     "jsdoc-tsimport-plugin": "^1.0.5",
     "mocha": "^11.7.1",
-    "semantic-release": "^22.0.5",
+    "semantic-release": "^24.2.6",
     "static-server": "^2.2.1"
   }
 }
